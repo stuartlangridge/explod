@@ -1,0 +1,297 @@
+<!doctype html>
+<html>
+<head>
+<meta charset=utf8>
+<title>explod</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+html, body {
+    padding: 0;
+    margin: 0;
+    background: black;
+}
+body, td {
+    font-family: sans-serif;
+    color: white;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #ccc;
+    width: 95%;
+    margin: auto;
+}
+td {
+    position: relative;
+    border-width: 0;
+    padding: 0;
+}
+a { 
+    display: block;
+    xwidth: 25px;
+    xheight: 25px;
+    text-align: center;
+    text-decoration: none;
+    line-height: 25px;
+    outline: 0;
+    -moz-transition: background-color 0.5s ease;
+    -webkit-transition: background-color 0.5s ease;
+    -o-transition: background-color 0.5s ease;
+    -ms-transition: background-color 0.5s ease;
+    transition: background-color 0.5s ease;
+}
+.d1 { background-color: #333; color: white; }
+.d2 { background-color: #666; color: white; }
+.d3 { background-color: #bbb; color: black; }
+.d4 { 
+    background-color: #fff; color: red; 
+    -moz-box-shadow: 0px 0px 10px #fdd;
+    -webkit-box-shadow: 0px 0px 10px #fdd;
+    box-shadow: 0px 0px 10px #fdd;
+}
+h1 {
+    color: #eee;
+    text-shadow: 0 0 5px white;
+    text-align: center;
+}
+.banner {
+    position: absolute;
+    width: 70%;
+    height: 150px;
+    background: black;
+    border: 5px solid #555;
+    color: white;
+    text-align: center;
+    line-height: 150px;
+    font-size: 20px;
+    left: 50%;
+    top: 50%;
+    margin-left: -35%;
+    margin-top: -75px;
+    border-radius: 25px;
+    display: none;
+}
+#score {
+    text-align: center;
+}
+</style>
+</head>
+<body>
+<h1>explod</h1>
+<div id="container"></div>
+<p id="score">touches remaining: <span id="remaining">0</span></p>
+<div class="banner" id="startlevel">level 1</div>
+<div class="banner" id="endlevel">victory! touch for next</div>
+<div class="banner" id="faillevel">failure! touch to retry</div>
+<script>
+(function() {
+    var dots = [], STEPLENGTH = 1, STEPPING = false, step, reds = {}, X = 6, Y = 8, LEVEL = 1, MOVES_LEFT;
+
+    var CustomRandom = function(nseed) {
+        var constant = Math.pow(2, 13)+1,  
+            prime = 37,  
+            maximum = Math.pow(2, 50);  
+            seed = nseed;  
+        return {  
+            next: function() {  
+                seed *= constant;  
+                seed += prime;  
+                seed %= maximum;  
+                return seed;  
+            }
+        }
+    };
+
+    var dostep = function(t) {
+        var as = t.getElementsByTagName("a");
+        for (k in reds) {
+            reds[k].style.backgroundColor = "";
+        }
+        var incrs = {};
+        reds = {};
+        while (EXPLOSIONS.length > 0) {
+            var expl = EXPLOSIONS.shift();
+            expl.className = "d0";
+            expl.innerHTML = " ";
+            
+            function bump(x, y) {
+                var red = as[(y*X) + x];
+                if (red.className == "d0") {
+                    reds[(y*X) + x] = red;
+                    red.style.backgroundColor = "red";
+                    return false;
+                } else {
+                    reds[(y*X) + x] = red;
+                    red.style.backgroundColor = "red";
+                    incrs[(y*X) + x] = red;
+                    return true
+                }
+            }
+            
+            for (var x=expl.x-1; x>=0; x--) { if (bump(x, expl.y)) break; }
+            for (var x=expl.x+1; x<X; x++) { if (bump(x, expl.y)) break; }
+            for (var y=expl.y-1; y>=0; y--) { if (bump(expl.x, y)) break; }
+            for (var y=expl.y+1; y<Y; y++) { if (bump(expl.x, y)) break; }
+        }
+        for (k in incrs) {
+            incr(t, incrs[k], false);
+        };
+        incrs = {};
+        if (EXPLOSIONS.length == 0) {
+            STEPPING = false;
+            setTimeout(function() {
+                for (k in reds) {
+                    reds[k].style.backgroundColor = "";
+                }
+                reds = {};
+            }, STEPLENGTH);
+            var win = true;
+            for (var i=0; i<as.length; i++) {
+                if (as[i].className != "d0") {
+                    win = false;
+                    break;
+                }
+            }
+            if (win) {
+                setTimeout(end_level, 1000);
+            } else if (MOVES_LEFT <= 0) {
+                setTimeout(fail_level, 1000);
+            }
+        } else {
+            setTimeout(function() { dostep(t); }, STEPLENGTH);
+        }
+    };
+    
+    var incr = function(t, a, user_triggered) {
+        var num = parseInt(a.className.charAt(1), 10);
+        if (num > 0) {
+            num += 1;
+            if (num == 5) {
+                EXPLOSIONS.push(a);
+                if (!STEPPING) {
+                    STEPPING = true;
+                    dostep(t);
+                }
+            } else {
+                a.firstChild.nodeValue = num;
+                a.className = "d" + num;
+                if (user_triggered && MOVES_LEFT <= 0) {
+                    setTimeout(fail_level, 200);
+                }
+            }
+        }
+    };
+    
+    var generate_level = function(seed, X, Y, rng) {
+        var data = [];
+        for (var i=0; i<X*Y; i++) {
+            data.push(rng.next() % 5);
+        }
+        return [50, data];
+    };
+    
+    var end_level = function() {
+        document.getElementById("endlevel").style.display = "block";
+        LEVEL += 1;
+    };
+    
+    var fail_level = function() {
+        document.getElementById("faillevel").style.display = "block";
+    };
+    
+    var next_level = function(t) {
+        document.getElementById("endlevel").style.display = "none";
+        document.getElementById("faillevel").style.display = "none";
+        start_level(t);
+    };
+    
+    var start_level = function(t) {
+        document.getElementById("startlevel").innerHTML = "level " + LEVEL;
+        document.getElementById("startlevel").style.display = "block";
+        
+        var rng = CustomRandom(LEVEL);
+        
+        var level_summary = generate_level(LEVEL, X, Y, rng);
+        MOVES_LEFT = level_summary[0];
+        document.getElementById("remaining").innerHTML = MOVES_LEFT;
+        var level_data = level_summary[1];
+        var as = t.getElementsByTagName("a");
+        if (level_data.length != as.length) {
+            alert("bad level data!");
+            return;
+        }
+        for (var i=0; i<level_data.length; i++) {
+            as[i].firstChild.nodeValue = [" ", "1", "2", "3", "4"][level_data[i]];
+            as[i].className = "d" + level_data[i];
+        }
+        STEPPING = false;
+        setTimeout(function() {
+            document.getElementById("startlevel").style.display = "none";
+        }, 2000);
+    };
+    
+    var init = function() {
+        STEPPING = true; // stop people clicking during level setup
+        var click_event_name = "click";
+        if ("ontouchstart" in document.documentElement) {
+            click_event_name = "touchstart";
+        } else {
+            // firefox
+            var el = document.createElement("a");
+            el.href = "#";
+            el.setAttribute("ontouchstart", "return;");
+            if (typeof el.ontouchstart == "function") {
+                click_event_name = "touchstart";
+            }
+        }
+        var t = document.createElement("table");
+        for (var y=0; y<Y; y++) {
+            var tr = document.createElement("tr");
+            for (var x=0; x<X; x++) {
+                var td = document.createElement("td");
+                var a = document.createElement("a");
+                a.href = "#";
+                a.appendChild(document.createTextNode("4"));
+                a.className = "d4";
+                a.x = x; a.y = y;
+                a.addEventListener(click_event_name, function(e) {
+                    if (STEPPING) return;
+                    e.preventDefault();
+                    MOVES_LEFT -= 1;
+                    document.getElementById("remaining").innerHTML = MOVES_LEFT;
+                    EXPLOSIONS = [];
+                    incr(t, this, true);
+                    return false;
+                }, false);
+                td.appendChild(a);
+                tr.appendChild(td);
+            }
+            t.appendChild(tr);
+        }
+        document.getElementById("container").appendChild(t);
+        
+        /* work out sensible widths for the squares */
+        var as = t.getElementsByTagName("a");
+        var w = as[0].offsetWidth;
+        if (w > (400 / Y)) w = 400 / Y;
+        t.style.width = "auto";
+        Array.prototype.slice.call(as).forEach(function(a) {
+            a.style.height = w + "px";
+            a.style.width = w + "px";
+            a.style.lineHeight = w + "px";
+        });
+        /* and set the width of the table explicitly, so it doesn't rescale on
+           window resize or orientationchange */
+        t.style.width = t.style.offsetWidth + "px";
+        
+        document.getElementById("endlevel").onclick = function() { next_level(t) };
+        document.getElementById("faillevel").onclick = function() { next_level(t) };
+        
+        /* and finally, start, with level 1 */
+        start_level(t);
+    };
+
+    init();
+})();
+</script>
+</body>
+</html>

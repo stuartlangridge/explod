@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+<head>
+<meta charset=utf8>
+<title>explod</title>
+<style>
+table {
+    border-collapse: collapse;
+}
+td {
+    border: 1px solid black;
+    min-width: 30px;
+    min-height: 30px;
+    text-align: center;
+    -moz-transition: background-color 0.5s ease;
+}
+
+td.s1 { background-color: #cfc; }
+td.s2 { background-color: #afa; }
+td.s3 { background-color: #7f7; }
+td.s4 { background-color: #0f0; }
+td.h1 { background-color: #fcc; }
+td.h2 { background-color: #faa; }
+td.h3 { background-color: #f77; }
+td.h4 { background-color: #f00; }
+
+</style>
+</head>
+<body>
+<script>
+(function(){
+    var LEVEL = [9,9, [[4,3,4], [3,4,4], [4,4,4], [5,4,4], [4,5,4]]];
+    
+    var apply_values = function(grid) {
+        for (var y=0; y<grid.rows.length; y++) {
+            for (var x=0; x<grid.rows[y].row.length; x++) {
+                var str = ".";
+                if (grid.rows[y].row[x].square > 0) {
+                    val = grid.rows[y].row[x].square <= 3 ? grid.rows[y].row[x].square : 4;
+                    grid.rows[y].row[x].td.className = "s" + val;
+                    str = val;
+                } else if (grid.rows[y].row[x].highlight > 0) {
+                    val = grid.rows[y].row[x].highlight <= 3 ? grid.rows[y].row[x].highlight : 4;
+                    grid.rows[y].row[x].td.className = "h" + val;
+                } else {
+                    grid.rows[y].row[x].td.className = "";
+                }
+                grid.rows[y].row[x].td.firstChild.nodeValue = str;
+            }
+        }
+    };
+
+    var tick = function(grid) {
+        var cont = false;
+        var endit = true;
+        var dupe = [];
+        for (var y=0; y<grid.rows.length; y++) {
+            var thisrow = [];
+            for (var x=0; x<grid.rows[y].row.length; x++) {
+                thisrow.push({square: -1, highlight: 0});
+            }
+            dupe.push(thisrow);
+        }
+        for (var y=0; y<grid.rows.length; y++) {
+            for (var x=0; x<grid.rows[y].row.length; x++) {
+                if (grid.rows[y].row[x].highlight > 0) {
+                    dupe[y][x].highlight = 0;
+                    cont = true;
+                    endit = false;
+                } else if (grid.rows[y].row[x].square > 4) {
+                    dupe[y][x].highlight = 4;
+                    dupe[y][x].square = 0;
+                    cont = true;
+                    endit = false;
+                    var thisx, thisy;
+                    
+                    // up
+                    thisx = x; thisy = y; loopon = true;
+                    while (loopon) {
+                        thisy -= 1;
+                        if (thisy < 0) {
+                            loopon = false;
+                        } else if ((grid.rows[thisy].row[thisx].square > 0) && (dupe[thisy][thisx].square != 0)) {
+                            dupe[thisy][thisx].square = grid.rows[thisy].row[thisx].square + 1;
+                            dupe[thisy][thisx].highlight = 0;
+                            loopon = false;
+                        } else if (grid.rows[thisy].row[thisx].highlight < 4) {
+                            dupe[thisy][thisx].highlight = dupe[thisy][thisx].highlight + 1;
+                        }
+                    }
+
+                    // down
+                    thisx = x; thisy = y; loopon = true;
+                    while (loopon) {
+                        thisy += 1;
+                        if (thisy >= grid.rows.length) {
+                            loopon = false;
+                        } else if ((grid.rows[thisy].row[thisx].square > 0) && (dupe[thisy][thisx].square != 0)) {
+                            dupe[thisy][thisx].square = grid.rows[thisy].row[thisx].square + 1;
+                            dupe[thisy][thisx].highlight = 0;
+                            loopon = false;
+                        } else if (grid.rows[thisy].row[thisx].highlight < 4) {
+                            dupe[thisy][thisx].highlight = dupe[thisy][thisx].highlight + 1;
+                        }
+                    }
+
+                    // right
+                    thisx = x; thisy = y; loopon = true;
+                    while (loopon) {
+                        thisx += 1;
+                        if (thisx >= grid.rows[thisy].row.length) {
+                            loopon = false;
+                        } else if ((grid.rows[thisy].row[thisx].square > 0) && (dupe[thisy][thisx].square != 0)) {
+                            dupe[thisy][thisx].square = grid.rows[thisy].row[thisx].square + 1;
+                            dupe[thisy][thisx].highlight = 0;
+                            loopon = false;
+                        } else if (grid.rows[thisy].row[thisx].highlight < 4) {
+                            dupe[thisy][thisx].highlight = dupe[thisy][thisx].highlight + 1;
+                        }
+                    }
+
+                    // left
+                    thisx = x; thisy = y; loopon = true;
+                    while (loopon) {
+                        thisx -= 1;
+                        if (thisx < 0) {
+                            loopon = false;
+                        } else if ((grid.rows[thisy].row[thisx].square > 0) && (dupe[thisy][thisx].square != 0)) {
+                            dupe[thisy][thisx].square = grid.rows[thisy].row[thisx].square + 1;
+                            dupe[thisy][thisx].highlight = 0;
+                            loopon = false;
+                        } else if (grid.rows[thisy].row[thisx].highlight < 4) {
+                            dupe[thisy][thisx].highlight = dupe[thisy][thisx].highlight + 1;
+                        }
+                    }
+                } else if (grid.rows[y].row[x].square > 0) {
+                    endit = false;
+                }
+            }
+        }
+
+        var s = "";
+        for (var y=0; y<grid.rows.length; y++) {
+            for (var x=0; x<grid.rows[y].row.length; x++) {
+                if ((dupe[y][x].square == -1)) {
+                    s+=grid.rows[y].row[x].square+"-"+dupe[y][x].highlight+".";
+                    grid.rows[y].row[x].highlight = dupe[y][x].highlight;
+                } else {
+                    s+=dupe[y][x].square+"-"+dupe[y][x].highlight+".";
+                    grid.rows[y].row[x].square = dupe[y][x].square;
+                    grid.rows[y].row[x].highlight = dupe[y][x].highlight;
+                }
+            }
+            s+="\n";
+        }
+        //console.log(s);
+        
+        apply_values(grid);
+        if (cont) setTimeout(function() { tick(grid) }, 500);
+        if (endit) alert("endit");
+    };
+    
+    var inc = function(x, y, grid) {
+        if (grid.rows[y].row[x].square == 0) return;
+        grid.rows[y].row[x].square += 1;
+        tick(grid);
+    };
+    
+    var draw = function(w, h, points) {
+        var table = document.createElement("table");
+        var grid = {"rows": [], "table": table};
+        for (var y=0; y<h; y++) {
+            var tr = document.createElement("tr");
+            table.appendChild(tr);
+            var row = {"tr": tr, "row": []};
+            for (var x=0; x<w; x++) {
+                var td = document.createElement("td");
+                td.appendChild(document.createTextNode(""));
+                tr.appendChild(td);
+                td.onclick = (function(x, y, grid) {
+                    return function() { inc(x, y, grid) };
+                })(x, y, grid);
+                row.row.push({"td": td, "square": 3, "highlight": 0, "highlighted_this_go": false});
+            }
+            grid.rows.push(row);
+        }
+        for (var i=0; i<points.length; i++) {
+            grid.rows[points[i][1]].row[points[i][0]].square = points[i][2];
+        }
+        document.body.appendChild(grid.table);
+        apply_values(grid);
+    };
+    
+    var init = function() {
+        var level = LEVEL;
+        draw(level[0], level[1], level[2]);
+    };
+    
+    init();
+})();
+</script>
+</body>
+</html>

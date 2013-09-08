@@ -1,0 +1,303 @@
+<!doctype html>
+<html>
+<head>
+<meta charset=utf8>
+<title>explod</title>
+<style>
+html, body {
+    padding: 0;
+    margin: 0;
+    background: black;
+}
+body, td {
+    font-family: sans-serif;
+    color: white;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #ccc;
+    width: 95%;
+    margin: auto;
+}
+td {
+    border-width: 0;
+    padding: 0;
+}
+a { 
+    display: block;
+    xwidth: 25px;
+    xheight: 25px;
+    text-align: center;
+    text-decoration: none;
+    line-height: 25px;
+    outline: 0;
+    -moz-transition: background-color 0.5s ease;
+    -webkit-transition: background-color 0.5s ease;
+    -o-transition: background-color 0.5s ease;
+    -ms-transition: background-color 0.5s ease;
+    transition: background-color 0.5s ease;
+}
+.d1 { background-color: #333; color: white; }
+.d2 { background-color: #666; color: white; }
+.d3 { background-color: #bbb; color: black; }
+.d4 { 
+    background-color: #fff; color: red; 
+    -moz-box-shadow: 0px 0px 10px #fdd;
+    -webkit-box-shadow: 0px 0px 10px #fdd;
+    box-shadow: 0px 0px 10px #fdd;
+}
+</style>
+</head>
+<body>
+<textarea rows="50" cols="50" style="float: right; font-size: 80%"></textarea>
+<h1>explod</h1>
+<table>
+</table>
+<p>touches remaining: <span id="remaining">0</span>
+<script>
+(function() {
+    var XSIZE = 9, YSIZE = 10;
+    var incrs = {}, explosions = {}, reds = {}, offreds = {}, TICKING = false, TICK;
+    var ta = document.querySelector("textarea");
+    ta.value = "";
+
+    var L = function() {
+        if (ta) ta.value += Array.prototype.slice.call(arguments).join(" ") + "\n";
+    };
+    
+    var tick = function(table) {
+
+        activity = false;
+        for (incr in incrs) {
+            activity = true;
+            L("incrs:", incr);
+            var new_value = table.incr(incr);
+            if (new_value == 5) {
+                explosions[incr] = 1;
+                table.set(incr, 0);
+            }
+        }
+        if (activity) L("checking incrs:", JSON.stringify(incrs));
+        incrs = {};
+        if (activity) return;
+        
+        activity = false;
+        for (explosion_key in explosions) {
+            var explosion = parseInt(explosion_key, 10);
+            activity = true;
+            L("explosions:", explosion);
+            table.set(explosion, 0);
+
+            for (var x=explosion-1; x >= (explosion - (explosion % XSIZE)); x--) {
+                reds[x] = 1;
+                if (table.get(x) != 0) break;
+            }
+
+            for (var x=explosion+1; x < (XSIZE + explosion - (explosion % XSIZE)); x++) {
+                reds[x] = 1;
+                if (table.get(x) != 0) break;
+            }
+
+            for (var x=explosion-XSIZE; x >= 0; x -= XSIZE) {
+                reds[x] = 1;
+                if (table.get(x) != 0) break;
+            }
+            
+            for (var downx=explosion+XSIZE; downx < (XSIZE * YSIZE); downx += XSIZE) {
+                L("going down", explosion, downx, XSIZE*YSIZE, table.get(downx));
+                reds[downx] = 1;
+                if (table.get(downx) != 0) {
+                    L("going down break");
+                    break;
+                }
+            }
+
+        }
+        if (activity) L("checking explosions:", JSON.stringify(explosions));
+        explosions = {};
+        if (activity) return;
+
+        activity = false;
+        for (red in reds) {
+            activity = true;
+            L("reds:", red);
+            if (table.get(red) != 0) {
+                incrs[red] = 1;
+            }
+            table.set_colour(red, "red");
+        }
+        if (activity) L("checking reds:", JSON.stringify(reds));
+        for (k in reds) { offreds[k] = 1; }
+        reds = {};
+        if (activity) return;
+        
+        activity = false;
+        for (offred in offreds) {
+            activity = true;
+            L("offreds:", offred);
+            (function(offredx) {
+                setTimeout(function() {
+                    table.set_colour(offredx, "");
+                }, 300);
+            })(offred);
+        }
+        if (activity) L("checking offreds:", JSON.stringify(offreds));
+        offreds = {};
+        if (activity) return;
+        
+        L("*tick*");
+        TICKING = false;
+        clearInterval(TICK);
+        
+    };
+    
+    /* ----------------------- init ----------------------- */
+    
+    var t = document.querySelector("table");
+    for (var y=0; y<YSIZE; y++) {
+        var tr = document.createElement("tr");
+        for (var x=0; x<XSIZE; x++) {
+            var td = document.createElement("td");
+            var a = document.createElement("a");
+            a.containedIndex = (y*XSIZE) + x;
+            a.href = "#";
+            a.innerHTML = "!";
+            a.onclick = function(e) {
+                if (TICKING) return;
+                TICKING = true;
+                incrs = {};
+                incrs[this.containedIndex] = 1;
+                tick(main_table_gateway); // call once, now, on click
+                TICK = setInterval(function() { tick(main_table_gateway); }, 50);
+                e.preventDefault();
+                return false;
+            }
+            td.appendChild(a);
+            tr.appendChild(td);
+        }
+        t.appendChild(tr);
+    };
+    
+    var tableAs = t.getElementsByTagName("a");
+
+    /* work out sensible widths for the squares */
+    var w = tableAs[0].offsetWidth;
+    if (w > (400 / YSIZE)) w = 400 / YSIZE;
+    t.style.width = "auto";
+    Array.prototype.slice.call(tableAs).forEach(function(a) {
+        a.style.height = w + "px";
+        a.style.width = w + "px";
+        a.style.lineHeight = w + "px";
+    });
+    /* and set the width of the table explicitly, so it doesn't rescale on
+       window resize or orientationchange */
+    t.style.width = t.style.offsetWidth + "px";
+
+    var main_table_gateway = {
+        get: function(idx) { return tableAs[idx].containedValue; },
+        set: function(idx, newvalue) {
+            tableAs[idx].containedValue = newvalue; 
+            tableAs[idx].innerHTML = tableAs[idx].containedValue == 0 ? " " : tableAs[idx].containedValue;
+            tableAs[idx].className = "d" + newvalue;
+        },
+        set_colour: function(idx, newcolour) {
+            tableAs[idx].style.backgroundColor = newcolour;
+        },
+        incr: function(idx) {
+            if (tableAs[idx].containedValue == 0) return 0;
+            tableAs[idx].containedValue += 1;
+            tableAs[idx].innerHTML = tableAs[idx].containedValue == 0 ? " " : tableAs[idx].containedValue;
+            tableAs[idx].className = "d" + tableAs[idx].containedValue;
+            return tableAs[idx].containedValue;
+        }
+    };
+
+    //for (var i=0; i<tableAs.length; i++) {
+    //    main_table_gateway.set(i, [0,3,2][Math.floor(Math.random()*3)]);
+    //}
+
+    var solver_gateway = {
+        get: function(idx) { return solver_level[idx] },
+        set: function(idx, newvalue) { solver_level[idx] = newvalue },
+        set_colour: function(idx, newcolour) { },
+        incr: function(idx) {
+            if (solver_level[idx] == 0) return 0;
+            solver_level[idx] += 1;
+            return solver_level[idx];
+        }
+    }
+    
+    try_solve = function(gateway) {
+        var hitval = 0, m, moves = [], won = false;
+        
+        while (!won) {
+            hitval = 0;
+            // make a random move
+            while (hitval == 0) {
+                m = Math.floor(Math.random() * XSIZE * YSIZE);
+                hitval = gateway.get(m);
+            }
+            L("doing a move", m);
+            moves.push(Math.floor(m/XSIZE) + "-" + (m % XSIZE));
+            incrs = {};
+            incrs[m] = 1;
+            TICKING = true;
+            while (TICKING) {
+                tick(solver_gateway);
+            };
+            won = true;
+            for (var i=0; i<XSIZE*YSIZE; i++) {
+                if (gateway.get(i) > 0) {
+                    won = false;
+                    break;
+                }
+            }
+        }
+        
+        return moves;
+    };
+    
+    L = function() { //console.log(arguments); 
+    };
+    
+    var min_moves = 500;
+    var solve_moves;
+
+    L("OK, inventing a level");
+    
+    var solver_level = [], level_data=[];
+    for (var i=0; i<tableAs.length; i++) {
+        solver_level[i] = 0;
+        level_data.push([0,0,3,4][Math.floor(Math.random()*4)]);
+    }
+
+
+    for (var tries=0; tries<50; tries++) {
+        for (var i=0; i<tableAs.length; i++) {
+            solver_gateway.set(i, level_data[i]);
+        }
+        var moves = try_solve(solver_gateway);
+        console.log("Solved in " + moves.length + " moves");
+        if (moves.length < min_moves) {
+            solve_moves = moves;
+            min_moves = moves.length;
+        }
+    }
+    console.log("After many tries, the best solution was " + solve_moves.length + " moves: ");
+    console.log(solve_moves.join(", "));
+    var lines = [];
+    for (y=0;y<YSIZE;y++) {
+        var line = [];
+        for (x=0;x<XSIZE;x++) {
+            line.push(level_data[(y*XSIZE)+x]);
+        }
+        lines.push(line.join(""));
+    }
+    console.log(lines.join("\n"));
+
+    
+})();
+</script>
+</body>
+</html>
+

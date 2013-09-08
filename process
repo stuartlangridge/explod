@@ -1,0 +1,34 @@
+click on a thing
+if < 4:
+   incrs = [thing]
+else:
+   explosions = [thing]
+
+tick:
+
+if incrs:
+    all incrs += 1
+    if incr == 5:
+        explosions += incr
+    incrs = []
+
+else
+if explosions:
+    all explosions = 0
+    reds += all lines from explosions up to a value
+    explosions = []
+
+else
+if reds:
+    all reds: bgcolor red
+    incrs += all reds with numbers
+    offreds = reds
+    reds = []
+
+else
+if offreds
+    all offreds: bgcolor = ''
+
+else:
+    skip.
+
